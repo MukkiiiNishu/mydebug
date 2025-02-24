@@ -16,3 +16,59 @@
     <!-- Optionally, you can add a startup activity or any other extension points here -->
     
 </idea-plugin>
+
+
+package com.example.breakpointcondition;
+
+import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.lookup.LookupElementBuilder;
+import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.patterns.PlatformPatterns;
+import com.intellij.psi.JavaCodeFragment;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.util.ProcessingContext;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * A simple CompletionContributor that adds suggestions only when the PSI file
+ * is a JavaCodeFragment (which includes the breakpoint condition editor).
+ */
+public class BreakpointConditionCompletionContributor extends CompletionContributor {
+    public BreakpointConditionCompletionContributor() {
+        extend(
+            CompletionType.BASIC,
+            // We look for any PsiElement inside a JavaCodeFragment
+            PlatformPatterns.psiElement().inFile(PlatformPatterns.psiFile(JavaCodeFragment.class)),
+            new CompletionProvider<CompletionParameters>() {
+                @Override
+                protected void addCompletions(@NotNull CompletionParameters parameters,
+                                              @NotNull ProcessingContext context,
+                                              @NotNull CompletionResultSet resultSet) {
+                    PsiFile file = parameters.getOriginalFile();
+                    // Optionally check for more conditions:
+                    // for example, check if the fragment is actually from the debugger:
+                    if (!(file instanceof JavaCodeFragment)) {
+                        return;
+                    }
+
+                    // Now add your suggestions:
+                    // In a real plugin, you'd probably gather them from some config or logic.
+                    // Here are some dummy suggestions:
+                    resultSet.addElement(LookupElementBuilder.create("myPluginSuggestion"));
+                    resultSet.addElement(LookupElementBuilder.create("anotherSuggestion"));
+
+                    // You can also add more dynamic or contextual suggestions
+                    // based on user input:
+                    String prefix = resultSet.getPrefixMatcher().getPrefix();
+                    if (StringUtil.isNotEmpty(prefix)) {
+                        resultSet.addElement(
+                            LookupElementBuilder.create("prefixBased_" + prefix)
+                                .withTailText(" (dynamic suggestion)", true)
+                        );
+                    }
+                }
+            }
+        );
+    }
+}
