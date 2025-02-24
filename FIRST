@@ -46,7 +46,7 @@ public class CustomBreakpointConditionPanel extends XBreakpointCustomPropertiesP
 
     @Override
     public void loadFrom(@NotNull XLineBreakpoint<?> breakpoint) {
-        String condition = breakpoint.getCondition();
+        String condition = breakpoint.getProperties().getCondition();
         if (condition != null && !condition.isEmpty()) {
             conditionComboBox.setSelectedItem(condition);
         }
