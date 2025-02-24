@@ -1,94 +1,132 @@
 package com.example.breakpointcondition;
 
-import com.intellij.debugger.ui.breakpoints.JavaLineBreakpointProperties;
-import com.intellij.openapi.project.Project;
-import com.intellij.ui.components.JBPanel;
-import com.intellij.xdebugger.XExpression;
-import com.intellij.xdebugger.breakpoints.XBreakpointCustomPropertiesPanel;
-import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
-import com.intellij.xdebugger.impl.ui.XDebuggerExpressionComboBox;
-import com.intellij.xdebugger.impl.ui.XDebuggerExpressionEditor;
-import com.intellij.xdebugger.impl.ui.XDebuggerExpressionEditorProvider;
+import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.lookup.LookupElementBuilder;
+import com.intellij.patterns.PlatformPatterns;
+import com.intellij.psi.JavaCodeFragment;
+import com.intellij.psi.PsiFile;
+import com.intellij.util.ProcessingContext;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+import static com.intellij.patterns.PlatformPatterns.psiElement;
+import static com.intellij.patterns.PlatformPatterns.psiFile;
 
-public class MyCustomBreakpointPanel
-    extends XBreakpointCustomPropertiesPanel<XLineBreakpoint<JavaLineBreakpointProperties>> {
-
-    private XDebuggerExpressionComboBox conditionCombo;
-    private JPanel mainPanel;
-
-    @Override
-    public @Nullable JComponent createComponent(
-            @NotNull XLineBreakpoint<JavaLineBreakpointProperties> breakpoint,
-            @NotNull Project project) {
-
-        mainPanel = new JBPanel<>(new BorderLayout());
-
-        // Create an expression combo box that can show a history dropdown:
-        conditionCombo = new XDebuggerExpressionComboBox(
-            project,
-            "javaBreakpointConditionHistoryKey",        // key used to store the history
-            XDebuggerExpressionEditorProvider.getInstance(),
-            breakpoint.getSourcePosition(),
-            /* showEditor = */ false,   // if 'true', it shows a bigger text editor area
-            /* showDebuggerActions = */ false
+/**
+ * This CompletionContributor adds custom suggestions in the breakpoint condition editor.
+ * It is triggered for any JavaCodeFragment (which the condition field uses).
+ */
+public class BreakpointConditionCompletionContributor extends CompletionContributor {
+    public BreakpointConditionCompletionContributor() {
+        extend(
+            CompletionType.BASIC,
+            psiElement().inFile(psiFile(JavaCodeFragment.class)),
+            new CompletionProvider<CompletionParameters>() {
+                @Override
+                protected void addCompletions(@NotNull CompletionParameters parameters,
+                                              @NotNull ProcessingContext context,
+                                              @NotNull CompletionResultSet resultSet) {
+                    PsiFile file = parameters.getOriginalFile();
+                    if (!(file instanceof JavaCodeFragment)) {
+                        return;
+                    }
+                    
+                    // Provide your plugin suggestions
+                    resultSet.addElement(LookupElementBuilder.create("myPluginSuggestion"));
+                    resultSet.addElement(LookupElementBuilder.create("anotherSuggestion"));
+                }
+            }
         );
-
-        // Build a custom "history" with your plugin suggestions:
-        List<XExpression> customHistory = new ArrayList<>();
-        customHistory.add(XDebuggerExpressionEditor.createXExpression("myPluginSuggestion", null, null, false));
-        customHistory.add(XDebuggerExpressionEditor.createXExpression("anotherSuggestion", null, null, false));
-        customHistory.add(XDebuggerExpressionEditor.createXExpression("oneMoreFromPlugin", null, null, false));
-        conditionCombo.setHistory(customHistory);
-
-        // Add a label + the combo to our panel
-        mainPanel.add(new JLabel("Condition:"), BorderLayout.WEST);
-        mainPanel.add(conditionCombo.getComponent(), BorderLayout.CENTER);
-
-        return mainPanel;
     }
+}
+
+
+
+package com.example.breakpointcondition;
+
+import com.intellij.codeInsight.completion.CodeCompletionHandlerBase;
+import com.intellij.codeInsight.completion.CompletionType;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.JavaCodeFragment;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * An action that forces code completion to show the plugin’s suggestions.
+ * This action is intended for use in the breakpoint condition editor only.
+ */
+public class ShowPluginSuggestionsAction extends AnAction {
 
     @Override
-    public void saveTo(@NotNull XLineBreakpoint<JavaLineBreakpointProperties> breakpoint) {
-        // If user typed something, store it back into the breakpoint
-        XExpression conditionExpr = conditionCombo.getExpression();
-        breakpoint.setConditionExpression(conditionExpr);
+    public void actionPerformed(@NotNull AnActionEvent e) {
+        Editor editor = e.getData(CommonDataKeys.EDITOR);
+        if (editor == null) return;
+        Project project = e.getProject();
+        if (project == null) return;
+        
+        // Force the basic completion popup to appear.
+        new CodeCompletionHandlerBase(CompletionType.BASIC)
+                .invokeCompletion(project, editor, 0, false, false);
     }
-
+    
     @Override
-    public void loadFrom(@NotNull XLineBreakpoint<JavaLineBreakpointProperties> breakpoint) {
-        // If the breakpoint already has a condition, show it in the combo
-        XExpression existingCondition = breakpoint.getConditionExpression();
-        if (existingCondition != null) {
-            conditionCombo.setExpression(existingCondition);
+    public void update(@NotNull AnActionEvent e) {
+        // Only enable and show this action if the current editor is a breakpoint condition editor
+        Editor editor = e.getData(CommonDataKeys.EDITOR);
+        boolean isBreakpointConditionEditor = false;
+        if (editor != null && editor.getProject() != null) {
+            PsiFile psiFile = PsiDocumentManager.getInstance(editor.getProject())
+                                                .getPsiFile(editor.getDocument());
+            if (psiFile instanceof JavaCodeFragment) {
+                isBreakpointConditionEditor = true;
+            }
         }
+        e.getPresentation().setEnabledAndVisible(isBreakpointConditionEditor);
     }
 }
 
 
 
 
-
 <idea-plugin>
-  <id>com.example.breakpointcondition</id>
-  <name>My Breakpoint Condition Panel</name>
-  <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
-  <version>1.0.0</version>
+    <id>com.example.breakpointcondition</id>
+    <name>Breakpoint Condition Completion Plugin</name>
+    <version>1.0.0</version>
+    <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
+    <description>
+        This plugin adds custom code completion suggestions for breakpoint condition fields.
+        Use the right-click menu or press the keyboard shortcut (Ctrl+Alt+P) to force the suggestions to appear.
+    </description>
 
-  <extensions defaultExtensionNs="com.intellij">
-    <!-- 
-      Provide a custom properties panel for Java line breakpoints. 
-      This will show up in the Breakpoint dialog in place of (or in addition to) the default fields.
-    -->
-    <xbreakpoint.customPanel 
-        breakpointType="java-line"
-        implementationClass="com.example.breakpointcondition.MyCustomBreakpointPanel"/>
-  </extensions>
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Register the CompletionContributor for JavaCodeFragment editors -->
+        <completion.contributor language="JAVA"
+                                implementationClass="com.example.breakpointcondition.BreakpointConditionCompletionContributor"/>
+    </extensions>
+
+    <actions>
+        <!-- Define the action that forces code completion -->
+        <action
+            id="com.example.breakpointcondition.ShowPluginSuggestionsAction"
+            class="com.example.breakpointcondition.ShowPluginSuggestionsAction"
+            text="Show Plugin Suggestions"
+            description="Force code completion to show plugin suggestions in the condition editor">
+        </action>
+
+        <!-- Add the action to the standard editor popup menu -->
+        <group id="EditorPopupMenu">
+            <add-action action-id="com.example.breakpointcondition.ShowPluginSuggestionsAction" anchor="last"/>
+        </group>
+    </actions>
+
+    <!-- Optionally, define a default keyboard shortcut -->
+    <keyboard-shortcuts>
+        <keyboard-shortcut
+            actionId="com.example.breakpointcondition.ShowPluginSuggestionsAction"
+            first-keystroke="ctrl alt P"/>
+    </keyboard-shortcuts>
 </idea-plugin>
-
