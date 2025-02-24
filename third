@@ -87,43 +87,36 @@ public class ShowPluginSuggestionsAction extends AnAction {
 }
 
 
-
 <idea-plugin>
-    <id>com.example.breakpointcondition</id>
-    <name>Breakpoint Condition Completion Plugin</name>
-    <version>1.0.0</version>
-    <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
-    <description>
-        This plugin adds custom code completion suggestions for breakpoint condition fields.
-        Right-click in the condition editor or press the keyboard shortcut (Ctrl+Alt+P)
-        to force the suggestions to appear.
-    </description>
-
-    <extensions defaultExtensionNs="com.intellij">
-        <!-- Register the CompletionContributor for JavaCodeFragment editors -->
-        <completion.contributor language="JAVA"
-                                implementationClass="com.example.breakpointcondition.BreakpointConditionCompletionContributor"/>
-    </extensions>
-
-    <actions>
-        <!-- Define the action that forces code completion -->
-        <action
-            id="com.example.breakpointcondition.ShowPluginSuggestionsAction"
-            class="com.example.breakpointcondition.ShowPluginSuggestionsAction"
-            text="Show Plugin Suggestions"
-            description="Force code completion to show plugin suggestions in the condition editor">
-        </action>
-
-        <!-- Add the action to the standard editor popup menu -->
-        <group id="EditorPopupMenu">
-            <add-action action-id="com.example.breakpointcondition.ShowPluginSuggestionsAction" anchor="last"/>
-        </group>
-    </actions>
-
-    <!-- Define a default keyboard shortcut for the action -->
-    <keyboard-shortcuts>
-        <keyboard-shortcut
-            actionId="com.example.breakpointcondition.ShowPluginSuggestionsAction"
-            first-keystroke="ctrl alt P"/>
-    </keyboard-shortcuts>
+  <id>com.example.breakpointcondition</id>
+  <name>Breakpoint Condition Completion Plugin</name>
+  <version>1.0.0</version>
+  <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
+  <description>
+    This plugin adds custom code completion suggestions for breakpoint condition fields.
+    Right-click in the condition editor or press the keyboard shortcut (Ctrl+Alt+P)
+    to force the suggestions to appear.
+  </description>
+  
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- Register the CompletionContributor for JavaCodeFragment editors -->
+    <completion.contributor language="JAVA"
+                            implementationClass="com.example.breakpointcondition.BreakpointConditionCompletionContributor"/>
+  </extensions>
+  
+  <actions>
+    <action
+        id="com.example.breakpointcondition.ShowPluginSuggestionsAction"
+        class="com.example.breakpointcondition.ShowPluginSuggestionsAction"
+        text="Show Plugin Suggestions"
+        description="Force code completion to show plugin suggestions in the condition editor">
+      <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+    </action>
+  </actions>
+  
+  <keyboard-shortcuts>
+    <keyboard-shortcut
+        actionId="com.example.breakpointcondition.ShowPluginSuggestionsAction"
+        first-keystroke="ctrl alt P"/>
+  </keyboard-shortcuts>
 </idea-plugin>
