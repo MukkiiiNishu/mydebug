@@ -1,13 +1,18 @@
-plugins {
-    id 'java'
-    id 'org.jetbrains.intellij' version '1.13.3'
-}
+<idea-plugin>
+    <id>com.example.breakpointcondition</id>
+    <name>Breakpoint Condition Completion</name>
+    <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
+    <description>
+        A sample plugin that provides custom completion suggestions in the breakpoint condition field.
+    </description>
+    <version>1.0.0</version>
+    
+    <!-- Register your completion contributor for Java code -->
+    <extensions defaultExtensionNs="com.intellij">
+        <completion.contributor language="JAVA"
+                                implementationClass="com.example.breakpointcondition.BreakpointConditionCompletionContributor"/>
+    </extensions>
 
-intellij {
-    version = '2023.3.4' // Match your IntelliJ version
-    plugins = ['java', 'platform-api', 'xdebugger']
-}
-
-dependencies {
-    implementation 'org.jetbrains:annotations:24.0.3'
-}
+    <!-- Optionally, you can add a startup activity or any other extension points here -->
+    
+</idea-plugin>
