@@ -1,0 +1,94 @@
+package com.example.breakpointcondition;
+
+import com.intellij.debugger.ui.breakpoints.JavaLineBreakpointProperties;
+import com.intellij.openapi.project.Project;
+import com.intellij.ui.components.JBPanel;
+import com.intellij.xdebugger.XExpression;
+import com.intellij.xdebugger.breakpoints.XBreakpointCustomPropertiesPanel;
+import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
+import com.intellij.xdebugger.impl.ui.XDebuggerExpressionComboBox;
+import com.intellij.xdebugger.impl.ui.XDebuggerExpressionEditor;
+import com.intellij.xdebugger.impl.ui.XDebuggerExpressionEditorProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MyCustomBreakpointPanel
+    extends XBreakpointCustomPropertiesPanel<XLineBreakpoint<JavaLineBreakpointProperties>> {
+
+    private XDebuggerExpressionComboBox conditionCombo;
+    private JPanel mainPanel;
+
+    @Override
+    public @Nullable JComponent createComponent(
+            @NotNull XLineBreakpoint<JavaLineBreakpointProperties> breakpoint,
+            @NotNull Project project) {
+
+        mainPanel = new JBPanel<>(new BorderLayout());
+
+        // Create an expression combo box that can show a history dropdown:
+        conditionCombo = new XDebuggerExpressionComboBox(
+            project,
+            "javaBreakpointConditionHistoryKey",        // key used to store the history
+            XDebuggerExpressionEditorProvider.getInstance(),
+            breakpoint.getSourcePosition(),
+            /* showEditor = */ false,   // if 'true', it shows a bigger text editor area
+            /* showDebuggerActions = */ false
+        );
+
+        // Build a custom "history" with your plugin suggestions:
+        List<XExpression> customHistory = new ArrayList<>();
+        customHistory.add(XDebuggerExpressionEditor.createXExpression("myPluginSuggestion", null, null, false));
+        customHistory.add(XDebuggerExpressionEditor.createXExpression("anotherSuggestion", null, null, false));
+        customHistory.add(XDebuggerExpressionEditor.createXExpression("oneMoreFromPlugin", null, null, false));
+        conditionCombo.setHistory(customHistory);
+
+        // Add a label + the combo to our panel
+        mainPanel.add(new JLabel("Condition:"), BorderLayout.WEST);
+        mainPanel.add(conditionCombo.getComponent(), BorderLayout.CENTER);
+
+        return mainPanel;
+    }
+
+    @Override
+    public void saveTo(@NotNull XLineBreakpoint<JavaLineBreakpointProperties> breakpoint) {
+        // If user typed something, store it back into the breakpoint
+        XExpression conditionExpr = conditionCombo.getExpression();
+        breakpoint.setConditionExpression(conditionExpr);
+    }
+
+    @Override
+    public void loadFrom(@NotNull XLineBreakpoint<JavaLineBreakpointProperties> breakpoint) {
+        // If the breakpoint already has a condition, show it in the combo
+        XExpression existingCondition = breakpoint.getConditionExpression();
+        if (existingCondition != null) {
+            conditionCombo.setExpression(existingCondition);
+        }
+    }
+}
+
+
+
+
+
+<idea-plugin>
+  <id>com.example.breakpointcondition</id>
+  <name>My Breakpoint Condition Panel</name>
+  <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
+  <version>1.0.0</version>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- 
+      Provide a custom properties panel for Java line breakpoints. 
+      This will show up in the Breakpoint dialog in place of (or in addition to) the default fields.
+    -->
+    <xbreakpoint.customPanel 
+        breakpointType="java-line"
+        implementationClass="com.example.breakpointcondition.MyCustomBreakpointPanel"/>
+  </extensions>
+</idea-plugin>
+
