@@ -88,8 +88,6 @@ public class ShowPluginSuggestionsAction extends AnAction {
 
 
 
-
-
 <idea-plugin>
     <id>com.example.breakpointcondition</id>
     <name>Breakpoint Condition Completion Plugin</name>
@@ -97,7 +95,8 @@ public class ShowPluginSuggestionsAction extends AnAction {
     <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
     <description>
         This plugin adds custom code completion suggestions for breakpoint condition fields.
-        Use the right-click menu or press the keyboard shortcut (Ctrl+Alt+P) to force the suggestions to appear.
+        Right-click in the condition editor or press the keyboard shortcut (Ctrl+Alt+P)
+        to force the suggestions to appear.
     </description>
 
     <extensions defaultExtensionNs="com.intellij">
@@ -121,7 +120,7 @@ public class ShowPluginSuggestionsAction extends AnAction {
         </group>
     </actions>
 
-    <!-- Optionally, define a default keyboard shortcut -->
+    <!-- Define a default keyboard shortcut for the action -->
     <keyboard-shortcuts>
         <keyboard-shortcut
             actionId="com.example.breakpointcondition.ShowPluginSuggestionsAction"
