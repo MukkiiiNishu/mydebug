@@ -1,0 +1,123 @@
+<idea-plugin>
+    <id>com.example.breakpointcondition</id>
+    <name>Breakpoint Condition Completion</name>
+    <vendor email="you@example.com" url="http://example.com">Your Name</vendor>
+    <description>
+      Provides custom completion suggestions in the breakpoint condition box, 
+      even if the user has not typed anything yet.
+    </description>
+    <version>1.0.0</version>
+
+    <!-- 1) Register the CompletionContributor -->
+    <extensions defaultExtensionNs="com.intellij">
+        <completion.contributor language="JAVA"
+                                implementationClass="com.example.breakpointcondition.BreakpointConditionCompletionContributor"/>
+
+        <!-- 2) Register the EditorFactoryListener so we can auto-popup completion -->
+        <editorFactoryListener implementation="com.example.breakpointcondition.BreakpointConditionEditorListener"/>
+    </extensions>
+
+</idea-plugin>
+
+
+package com.example.breakpointcondition;
+
+import com.intellij.codeInsight.AutoPopupController;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.event.EditorFactoryEvent;
+import com.intellij.openapi.editor.event.EditorFactoryListener;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.psi.JavaCodeFragment;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiFile;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Triggers auto-completion when a JavaCodeFragment editor is created (e.g., a breakpoint condition).
+ */
+public class BreakpointConditionEditorListener implements EditorFactoryListener {
+
+    @Override
+    public void editorCreated(@NotNull EditorFactoryEvent event) {
+        Editor editor = event.getEditor();
+        if (editor.getProject() == null) {
+            return;
+        }
+        // We do this on a small delay to let the editor finish loading
+        ApplicationManager.getApplication().invokeLater(() -> {
+            if (isBreakpointConditionEditor(editor)) {
+                // Force show code-completion popup
+                AutoPopupController.getInstance(editor.getProject())
+                                   .autoPopupMemberLookup(editor, null);
+            }
+        });
+    }
+
+    private boolean isBreakpointConditionEditor(Editor editor) {
+        // Check if the associated PsiFile is a JavaCodeFragment
+        PsiFile psiFile = PsiDocumentManager.getInstance(editor.getProject())
+                                            .getPsiFile(editor.getDocument());
+        if (psiFile instanceof JavaCodeFragment) {
+            // If you want to be absolutely sure it's the debugger condition,
+            // you could check the fragment's context or userData here.
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void editorReleased(@NotNull EditorFactoryEvent event) {
+        // Not needed for this example
+    }
+}
+
+
+
+
+package com.example.breakpointcondition;
+
+import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.lookup.LookupElementBuilder;
+import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.patterns.PlatformPatterns;
+import com.intellij.psi.JavaCodeFragment;
+import com.intellij.psi.PsiFile;
+import com.intellij.util.ProcessingContext;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Contributes suggestions for JavaCodeFragments (including breakpoint condition fields).
+ */
+public class BreakpointConditionCompletionContributor extends CompletionContributor {
+    public BreakpointConditionCompletionContributor() {
+        extend(
+            CompletionType.BASIC,
+            PlatformPatterns.psiElement().inFile(PlatformPatterns.psiFile(JavaCodeFragment.class)),
+            new CompletionProvider<>() {
+                @Override
+                protected void addCompletions(@NotNull CompletionParameters parameters,
+                                              @NotNull ProcessingContext context,
+                                              @NotNull CompletionResultSet resultSet) {
+                    PsiFile file = parameters.getOriginalFile();
+                    if (!(file instanceof JavaCodeFragment)) {
+                        return;
+                    }
+
+                    // Always add some suggestions
+                    resultSet.addElement(LookupElementBuilder.create("myPluginSuggestion"));
+                    resultSet.addElement(LookupElementBuilder.create("anotherSuggestion"));
+
+                    // Optionally show something dynamic if the user typed a prefix
+                    String prefix = resultSet.getPrefixMatcher().getPrefix();
+                    if (StringUtil.isNotEmpty(prefix)) {
+                        resultSet.addElement(
+                            LookupElementBuilder.create("prefixBased_" + prefix)
+                                .withTailText(" (dynamic)", true)
+                        );
+                    }
+                }
+            }
+        );
+    }
+}
