@@ -1,6 +1,7 @@
 package com.example.plugin;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.ui.components.JBComboBox;
 import com.intellij.xdebugger.breakpoints.ui.XBreakpointCustomPropertiesPanel;
 import com.intellij.xdebugger.breakpoints.XBreakpoint;
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
@@ -12,53 +13,63 @@ import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
 
-public class CustomBreakpointPanel<B extends XBreakpoint<?>> extends XBreakpointCustomPropertiesPanel<B> {
+public class CustomBreakpointConditionPanel extends XBreakpointCustomPropertiesPanel<XLineBreakpoint<?>> {
 
-    private JComboBox<String> conditionComboBox;
+    private final JBComboBox<String> conditionComboBox;
 
-    // Static suggestions
+    // Predefined Suggestions
     private static final List<String> SUGGESTIONS = Arrays.asList(
             "This is from Plugin",
             "x > 10",
             "y != null",
-            "debugMode == true"
+            "debugMode == true",
+            "counter % 2 == 0"
     );
+
+    public CustomBreakpointConditionPanel() {
+        conditionComboBox = new JBComboBox<>();
+        SUGGESTIONS.forEach(conditionComboBox::addItem);
+    }
 
     @Nullable
     @Override
     public JComponent createComponent() {
-        // Create a JPanel
         JPanel panel = new JPanel(new BorderLayout());
 
-        // Create JComboBox for suggestions
-        conditionComboBox = new JComboBox<>();
-        SUGGESTIONS.forEach(conditionComboBox::addItem);
-        
-        // Add ComboBox to panel
-        panel.add(new JLabel("Suggested Conditions:"), BorderLayout.WEST);
+        // Label
+        JLabel label = new JLabel("Suggested Conditions:");
+        panel.add(label, BorderLayout.WEST);
+
+        // Add ComboBox
         panel.add(conditionComboBox, BorderLayout.CENTER);
 
         return panel;
     }
 
     @Override
-    public void saveTo(@NotNull B breakpoint) {
-        if (breakpoint instanceof XLineBreakpoint) {
-            ((XLineBreakpoint<?>) breakpoint).setCondition((String) conditionComboBox.getSelectedItem());
-        }
+    public void saveTo(@NotNull XLineBreakpoint<?> breakpoint) {
+        breakpoint.setCondition((String) conditionComboBox.getSelectedItem());
     }
 
     @Override
-    public void loadFrom(@NotNull B breakpoint) {
-        if (breakpoint instanceof XLineBreakpoint) {
-            conditionComboBox.setSelectedItem(((XLineBreakpoint<?>) breakpoint).getCondition());
-        }
+    public void loadFrom(@NotNull XLineBreakpoint<?> breakpoint) {
+        conditionComboBox.setSelectedItem(breakpoint.getCondition());
     }
 }
 
 
-<extensions defaultExtensionNs="com.intellij">
-    <xbreakpointCustomPropertiesPanel 
-        language="JAVA" 
-        implementationClass="com.example.plugin.CustomBreakpointPanel"/>
-</extensions>
+
+<idea-plugin>
+    <id>com.example.plugin</id>
+    <name>Breakpoint Condition Plugin</name>
+    <version>1.0</version>
+    <vendor email="your-email@example.com">Your Name</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <xbreakpointCustomPropertiesPanel 
+            language="JAVA"
+            implementationClass="com.example.plugin.CustomBreakpointConditionPanel"/>
+    </extensions>
+</idea-plugin>
