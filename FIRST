@@ -1,77 +1,13 @@
-package com.example.breakpointhelper;
-
-import com.intellij.codeInsight.completion.*;
-import com.intellij.codeInsight.lookup.LookupElementBuilder;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.ex.EditorEx;
-import com.intellij.openapi.util.Key;
-import com.intellij.psi.PsiFile;
-import com.intellij.xdebugger.breakpoints.XBreakpoint;
-import com.intellij.xdebugger.breakpoints.ui.XBreakpointCustomEditor;
-import com.intellij.xdebugger.impl.breakpoints.XBreakpointUtil;
-import org.jetbrains.annotations.NotNull;
-
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-
-public class AutoTriggerBreakpointCompletion extends CompletionContributor {
-    private static final Key<Boolean> BREAKPOINT_CONTEXT_KEY = 
-        Key.create("BREAKPOINT_CONDITION_AUTO_COMPLETE");
-
-    public AutoTriggerBreakpointCompletion() {
-        extend(CompletionType.BASIC, new BreakpointConditionPattern(),
-            new CompletionProvider<>() {
-                @Override
-                protected void addCompletions(@NotNull CompletionParameters parameters,
-                                            @NotNull ProcessingContext context,
-                                            @NotNull CompletionResultSet result) {
-                    result.addElement(
-                        LookupElementBuilder.create("This is from my plugin")
-                            .withBoldness(true)
-                            .withTypeText("Custom Suggestion")
-                    );
-                }
-            });
-    }
-
-    private static class BreakpointConditionPattern implements ElementPattern<CompletionParameters> {
-        @Override
-        public boolean accepts(@NotNull CompletionParameters parameters) {
-            PsiFile file = parameters.getOriginalFile();
-            return file.getUserData(BREAKPOINT_CONTEXT_KEY) != null;
-        }
-    }
-
-    public static class AutoTriggerEditor extends XBreakpointCustomEditor<XBreakpoint<?>> {
-        @Override
-        public void editorCreated(@NotNull Editor editor, @NotNull XBreakpoint<?> breakpoint) {
-            XBreakpointUtil.breakpointEditorCreated(breakpoint, editor);
-            editor.getDocument().putUserData(BREAKPOINT_CONTEXT_KEY, true);
-            
-            // Auto-show suggestions on focus
-            editor.getContentComponent().addFocusListener(new FocusAdapter() {
-                @Override
-                public void focusGained(FocusEvent e) {
-                    if (editor instanceof EditorEx) {
-                        CompletionUtil.showCompletion((EditorEx) editor);
-                    }
-                }
-            });
-        }
-
-        @Override
-        public void editorReleased(@NotNull Editor editor, @NotNull XBreakpoint<?> breakpoint) {
-            editor.getDocument().putUserData(BREAKPOINT_CONTEXT_KEY, null);
-        }
-    }
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij' version '1.13.3'
 }
 
+intellij {
+    version = '2023.3.4' // Match your IntelliJ version
+    plugins = ['java', 'platform-api', 'xdebugger']
+}
 
-<extensions defaultExtensionNs="com.intellij">
-    <completion.contributor
-        language="ANY"
-        implementationClass="com.example.breakpointhelper.AutoTriggerBreakpointCompletion"/>
-
-    <breakpoint.customEditor 
-        implementationClass="com.example.breakpointhelper.AutoTriggerBreakpointCompletion$AutoTriggerEditor"/>
-</extensions>
+dependencies {
+    implementation 'org.jetbrains:annotations:24.0.3'
+}
