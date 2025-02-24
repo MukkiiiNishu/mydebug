@@ -58,3 +58,27 @@ public class CustomBreakpointConditionPanel extends XBreakpointCustomPropertiesP
         }
     }
 }
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+    <id>com.example.plugin</id>
+    <name>Breakpoint Condition Suggestions</name>
+    <version>1.0</version>
+    <vendor email="support@example.com" url="https://example.com">Example Inc.</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <xbreakpointCustomPropertiesPanel language="JAVA"
+            implementation="com.example.plugin.CustomBreakpointConditionPanel"/>
+    </extensions>
+
+    <idea-version since-build="203" until-build="232.*"/>
+
+    <description>
+        This plugin provides condition suggestions in the breakpoint settings.
+    </description>
+</idea-plugin>
