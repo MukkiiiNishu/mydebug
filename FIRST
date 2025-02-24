@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
 import com.intellij.xdebugger.breakpoints.ui.XBreakpointCustomPropertiesPanel;
+import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl;
 import org.jetbrains.annotations.NotNull;
 import javax.swing.*;
 import java.awt.*;
@@ -41,14 +42,19 @@ public class CustomBreakpointConditionPanel extends XBreakpointCustomPropertiesP
 
     @Override
     public void saveTo(@NotNull XLineBreakpoint<?> breakpoint) {
-        breakpoint.setCondition(conditionComboBox.getSelectedItem().toString());
+        String selectedCondition = (String) conditionComboBox.getSelectedItem();
+        if (selectedCondition != null) {
+            breakpoint.setConditionExpression(XExpressionImpl.fromText(selectedCondition));
+        }
     }
 
     @Override
     public void loadFrom(@NotNull XLineBreakpoint<?> breakpoint) {
-        String condition = breakpoint.getProperties().getCondition();
-        if (condition != null && !condition.isEmpty()) {
-            conditionComboBox.setSelectedItem(condition);
+        if (breakpoint.getConditionExpression() != null) {
+            String condition = breakpoint.getConditionExpression().getExpression();
+            if (condition != null && !condition.isEmpty()) {
+                conditionComboBox.setSelectedItem(condition);
+            }
         }
     }
 }
