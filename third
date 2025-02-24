@@ -41,12 +41,13 @@ public class BreakpointConditionCompletionContributor extends CompletionContribu
 
 
 
-package com.example.breakpointcondition;
+    
+ package com.example.breakpointcondition;
 
-import com.intellij.codeInsight.completion.CodeCompletionHandlerBase;
-import com.intellij.codeInsight.completion.CompletionType;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -63,19 +64,15 @@ public class ShowPluginSuggestionsAction extends AnAction {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        Editor editor = e.getData(CommonDataKeys.EDITOR);
-        if (editor == null) return;
-        Project project = e.getProject();
-        if (project == null) return;
-        
-        // Force the basic completion popup to appear.
-        new CodeCompletionHandlerBase(CompletionType.BASIC)
-                .invokeCompletion(project, editor, 0, false, false);
+        // Instead of calling a private method, trigger the built-in code completion action.
+        ActionManager.getInstance()
+                     .getAction(IdeActions.ACTION_CODE_COMPLETION)
+                     .actionPerformed(e);
     }
     
     @Override
     public void update(@NotNull AnActionEvent e) {
-        // Only enable and show this action if the current editor is a breakpoint condition editor
+        // Enable and show this action only if the current editor is a breakpoint condition editor
         Editor editor = e.getData(CommonDataKeys.EDITOR);
         boolean isBreakpointConditionEditor = false;
         if (editor != null && editor.getProject() != null) {
@@ -88,6 +85,7 @@ public class ShowPluginSuggestionsAction extends AnAction {
         e.getPresentation().setEnabledAndVisible(isBreakpointConditionEditor);
     }
 }
+
 
 
 
