@@ -2,7 +2,7 @@ package com.example.breakpointcondition;
 
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
-import com.intellij.codeInsight.lookup.impl.PrioritizedLookupElement;
+import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.JavaCodeFragment;
@@ -12,14 +12,18 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * A CompletionContributor that provides custom suggestions in the Java breakpoint condition editor.
- * The suggestions are always visible irrespective of the user input and are prioritized at the top.
+ * The suggestions are always shown irrespective of the typed prefix.
+ * Each suggestion is flagged with a special key so that a custom weigher can boost them.
  */
 public class BreakpointConditionCompletionContributor extends CompletionContributor {
+
+    // Define a key to mark our plugin's lookup elements.
+    public static final Key<Boolean> MY_PLUGIN_KEY = Key.create("MY_PLUGIN_KEY");
 
     public BreakpointConditionCompletionContributor() {
         extend(
             CompletionType.BASIC,
-            // Apply to any PsiElement inside a JavaCodeFragment (breakpoint condition editor)
+            // Apply to any PsiElement inside a JavaCodeFragment (used in breakpoint condition editors)
             PlatformPatterns.psiElement().inFile(PlatformPatterns.psiFile(JavaCodeFragment.class)),
             new CompletionProvider<CompletionParameters>() {
                 @Override
@@ -31,34 +35,34 @@ public class BreakpointConditionCompletionContributor extends CompletionContribu
                         return;
                     }
 
-                    // Create a custom PrefixMatcher that always returns true so suggestions are shown regardless of prefix
-                    CompletionResultSet customResultSet = resultSet.withPrefixMatcher(new PrefixMatcher(resultSet.getPrefixMatcher().getPrefix()) {
+                    // Capture the current prefix (if needed for dynamic suggestions).
+                    final String originalPrefix = resultSet.getPrefixMatcher().getPrefix();
+
+                    // Create a custom PrefixMatcher that always returns true so suggestions are not filtered.
+                    CompletionResultSet customResultSet = resultSet.withPrefixMatcher(new PrefixMatcher(originalPrefix) {
                         @Override
                         public boolean prefixMatches(@NotNull String name) {
                             return true;
                         }
-
-                        @NotNull
-                        @Override
-                        public String getPrefix() {
-                            return resultSet.getPrefixMatcher().getPrefix();
-                        }
                     });
 
-                    // Add fixed suggestions with high priority to ensure they appear at the top.
-                    customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                        LookupElementBuilder.create("myPluginSuggestion"), 1000.0));
+                    // Add fixed suggestions with our plugin flag.
+                    customResultSet.addElement(
+                        LookupElementBuilder.create("myPluginSuggestion")
+                            .putUserData(MY_PLUGIN_KEY, Boolean.TRUE)
+                    );
+                    customResultSet.addElement(
+                        LookupElementBuilder.create("anotherSuggestion")
+                            .putUserData(MY_PLUGIN_KEY, Boolean.TRUE)
+                    );
 
-                    customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                        LookupElementBuilder.create("anotherSuggestion"), 999.0));
-
-                    // Optionally add a dynamic suggestion based on user input
-                    String prefix = resultSet.getPrefixMatcher().getPrefix();
-                    if (StringUtil.isNotEmpty(prefix)) {
-                        customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                            LookupElementBuilder.create("prefixBased_" + prefix)
-                                .withTailText(" (dynamic suggestion)", true),
-                            998.0));
+                    // Optionally, add a dynamic suggestion based on user input.
+                    if (StringUtil.isNotEmpty(originalPrefix)) {
+                        customResultSet.addElement(
+                            LookupElementBuilder.create("prefixBased_" + originalPrefix)
+                                .withTailText(" (dynamic suggestion)", true)
+                                .putUserData(MY_PLUGIN_KEY, Boolean.TRUE)
+                        );
                     }
                 }
             }
@@ -66,6 +70,26 @@ public class BreakpointConditionCompletionContributor extends CompletionContribu
     }
 }
 
+package com.example.breakpointcondition;
+
+import com.intellij.codeInsight.completion.CompletionLocation;
+import com.intellij.codeInsight.completion.CompletionWeigher;
+import com.intellij.codeInsight.lookup.LookupElement;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * A custom CompletionWeigher that boosts suggestions from our plugin.
+ * Elements flagged with MY_PLUGIN_KEY (Boolean.TRUE) receive a lower weight,
+ * causing them to be sorted at the top of the completion list.
+ */
+public class MyPluginCompletionWeigher extends CompletionWeigher {
+    @Override
+    public Comparable weigh(@NotNull LookupElement element, @NotNull CompletionLocation location) {
+        Boolean flag = element.getUserData(BreakpointConditionCompletionContributor.MY_PLUGIN_KEY);
+        // Lower weight means higher priority; items without our flag get 0.
+        return Boolean.TRUE.equals(flag) ? -1000 : 0;
+    }
+}
 
 <idea-plugin>
     <id>com.example.breakpointcondition</id>
@@ -76,160 +100,15 @@ public class BreakpointConditionCompletionContributor extends CompletionContribu
     </description>
     <version>1.0.0</version>
 
-    <!-- Register the completion contributor for Java code fragments (e.g., breakpoint conditions) -->
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Register the completion contributor for Java code fragments (e.g., breakpoint condition editors) -->
         <completion.contributor 
             language="JAVA"  
             implementationClass="com.example.breakpointcondition.BreakpointConditionCompletionContributor"/>
+
+        <!-- Register the custom weigher to boost our plugin's suggestions -->
+        <completion.weigher 
+            language="JAVA"
+            implementationClass="com.example.breakpointcondition.MyPluginCompletionWeigher" />
     </extensions>
 </idea-plugin>
-
-
-
-lates
-
-
-package com.example.breakpointcondition;
-
-import com.intellij.codeInsight.completion.CompletionContributor;
-import com.intellij.codeInsight.completion.CompletionParameters;
-import com.intellij.codeInsight.completion.CompletionProvider;
-import com.intellij.codeInsight.completion.CompletionResultSet;
-import com.intellij.codeInsight.completion.CompletionType;
-import com.intellij.codeInsight.lookup.LookupElementBuilder;
-import com.intellij.codeInsight.lookup.PrioritizedLookupElement;
-import com.intellij.openapi.util.text.StringUtil;
-import com.intellij.patterns.PlatformPatterns;
-import com.intellij.psi.JavaCodeFragment;
-import com.intellij.psi.PsiFile;
-import com.intellij.util.ProcessingContext;
-import org.jetbrains.annotations.NotNull;
-
-/**
- * A CompletionContributor that provides custom suggestions in the Java breakpoint condition editor.
- * The suggestions are always visible irrespective of the user input and are prioritized at the top.
- */
-public class BreakpointConditionCompletionContributor extends CompletionContributor {
-
-    public BreakpointConditionCompletionContributor() {
-        extend(
-            CompletionType.BASIC,
-            // Apply to any PsiElement inside a JavaCodeFragment (breakpoint condition editor)
-            PlatformPatterns.psiElement().inFile(PlatformPatterns.psiFile(JavaCodeFragment.class)),
-            new CompletionProvider<CompletionParameters>() {
-                @Override
-                protected void addCompletions(@NotNull CompletionParameters parameters,
-                                              @NotNull ProcessingContext context,
-                                              @NotNull CompletionResultSet resultSet) {
-                    PsiFile file = parameters.getOriginalFile();
-                    if (!(file instanceof JavaCodeFragment)) {
-                        return;
-                    }
-
-                    // Capture the current prefix
-                    final String originalPrefix = resultSet.getPrefixMatcher().getPrefix();
-
-                    // Create a custom PrefixMatcher that always returns true.
-                    CompletionResultSet customResultSet = resultSet.withPrefixMatcher(new com.intellij.codeInsight.completion.PrefixMatcher(originalPrefix) {
-                        @Override
-                        public boolean prefixMatches(@NotNull String name) {
-                            return true;
-                        }
-                    });
-
-                    // Add fixed suggestions with high priority to ensure they appear at the top.
-                    customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                        LookupElementBuilder.create("myPluginSuggestion"), 1000.0));
-
-                    customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                        LookupElementBuilder.create("anotherSuggestion"), 999.0));
-
-                    // Optionally add a dynamic suggestion based on user input
-                    if (StringUtil.isNotEmpty(originalPrefix)) {
-                        customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                            LookupElementBuilder.create("prefixBased_" + originalPrefix)
-                                .withTailText(" (dynamic suggestion)", true),
-                            998.0));
-                    }
-                }
-            }
-        );
-    }
-}
-
-
-
-
-latestb1
-
-package com.example.breakpointcondition;
-
-import com.intellij.codeInsight.completion.CompletionContributor;
-import com.intellij.codeInsight.completion.CompletionParameters;
-import com.intellij.codeInsight.completion.CompletionProvider;
-import com.intellij.codeInsight.completion.CompletionResultSet;
-import com.intellij.codeInsight.completion.CompletionType;
-import com.intellij.codeInsight.completion.PrefixMatcher;
-import com.intellij.codeInsight.lookup.LookupElementBuilder;
-// Use the implementation package for prioritized lookup element.
-// (If your SDK version provides an API alternative, you may use that instead.)
-import com.intellij.codeInsight.lookup.impl.PrioritizedLookupElement;
-import com.intellij.openapi.util.text.StringUtil;
-import com.intellij.patterns.PlatformPatterns;
-import com.intellij.psi.JavaCodeFragment;
-import com.intellij.psi.PsiFile;
-import com.intellij.util.ProcessingContext;
-import org.jetbrains.annotations.NotNull;
-
-/**
- * Provides custom completion suggestions in Java breakpoint condition editors.
- * The suggestions are always visible (irrespective of the typed prefix)
- * and are prioritized to appear at the top.
- */
-public class BreakpointConditionCompletionContributor extends CompletionContributor {
-
-    public BreakpointConditionCompletionContributor() {
-        extend(
-            CompletionType.BASIC,
-            // Apply to any PsiElement inside a JavaCodeFragment (the breakpoint condition editor)
-            PlatformPatterns.psiElement().inFile(PlatformPatterns.psiFile(JavaCodeFragment.class)),
-            new CompletionProvider<CompletionParameters>() {
-                @Override
-                protected void addCompletions(@NotNull CompletionParameters parameters,
-                                              @NotNull ProcessingContext context,
-                                              @NotNull CompletionResultSet resultSet) {
-                    PsiFile file = parameters.getOriginalFile();
-                    if (!(file instanceof JavaCodeFragment)) {
-                        return;
-                    }
-
-                    // Capture the current prefix (for dynamic suggestions, if needed)
-                    final String originalPrefix = resultSet.getPrefixMatcher().getPrefix();
-
-                    // Create a custom PrefixMatcher that always returns true for prefixMatches.
-                    CompletionResultSet customResultSet = resultSet.withPrefixMatcher(new PrefixMatcher(originalPrefix) {
-                        @Override
-                        public boolean prefixMatches(@NotNull String name) {
-                            return true;
-                        }
-                    });
-
-                    // Add fixed suggestions with high priority so they always appear on top.
-                    customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                        LookupElementBuilder.create("myPluginSuggestion"), 1000.0));
-
-                    customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                        LookupElementBuilder.create("anotherSuggestion"), 999.0));
-
-                    // Optionally add a dynamic suggestion based on user input.
-                    if (StringUtil.isNotEmpty(originalPrefix)) {
-                        customResultSet.addElement(PrioritizedLookupElement.withPriority(
-                            LookupElementBuilder.create("prefixBased_" + originalPrefix)
-                                .withTailText(" (dynamic suggestion)", true),
-                            998.0));
-                    }
-                }
-            }
-        );
-    }
-}
